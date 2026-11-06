@@ -8,10 +8,11 @@ import { PeriodNav } from "../components/PeriodBar";
 import { allocate, billStatus, friendBalance, friendOwesMe, iOweFriend, rankCategories, sum, type Bill } from "../lib/calc";
 import { money } from "../lib/format";
 import { Icon } from "../lib/icons";
+import { deletePersonMessage } from "../lib/people";
 import type { Expense, PayDirection, Settlement } from "../lib/types";
 
 export function Roommate() {
-  const { people, expenses, settlements, allocations, categories, markReimbursed } = useData();
+  const { people, expenses, settlements, loans, allocations, categories, markReimbursed, deletePerson } = useData();
   const [pid, setPid] = useState<string | null>(null);
   const [monthOpen, setMonthOpen] = useState<Record<string, boolean>>({}); // newest month starts open, the rest collapsed
   const [claimsOpen, setClaimsOpen] = useState(false);
@@ -145,6 +146,7 @@ export function Roommate() {
         );
       })}
       {history.length > 0 && <p className="hint">Tap a payment to correct or delete it.</p>}
+      <button className="btn danger block" onClick={() => { if (confirm(deletePersonMessage(person, expenses, settlements, loans))) { setPid(null); void deletePerson(person.id).catch((er) => alert(er.message)); } }}>Delete {person.name}</button>
 
       {editing && <EditPaymentSheet pay={editing} name={person.name} onClose={() => setEditing(null)} />}
       {paying && <PaySheet direction={paying} initialAmount={payAmount} bills={bills} personId={person.id} name={person.name} onClose={() => setPaying(null)} />}

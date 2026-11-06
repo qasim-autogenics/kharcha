@@ -7,6 +7,7 @@ import { CHART_VIEWS, DEFAULT_CHART_VIEW, type ChartView } from "../lib/config";
 import { getPref, setPref } from "../lib/prefs";
 import { Sheet } from "../components/Sheet";
 import { ImportSheet } from "../components/ImportSheet";
+import { deletePersonMessage } from "../lib/people";
 
 const THEMES: { id: ThemePref; label: string; icon: string }[] = [
   { id: "light", label: "Light", icon: "sun" }, { id: "dark", label: "Dark", icon: "moon" }, { id: "auto", label: "Auto", icon: "gear" },
@@ -14,7 +15,7 @@ const THEMES: { id: ThemePref; label: string; icon: string }[] = [
 const VIEWS = CHART_VIEWS.map((v) => v.id) as readonly ChartView[];
 
 export function Settings({ email }: { email?: string }) {
-  const { openingBalance, setOpeningBalance, budget, setBudget, targets, addTarget, removeTarget, people, categories, expenses, loans, settlements, addPerson, setRoommate, addCategory, archiveCategory, deleteCategory } = useData();
+  const { openingBalance, setOpeningBalance, budget, setBudget, targets, addTarget, removeTarget, people, categories, expenses, loans, settlements, addPerson, setRoommate, deletePerson, addCategory, archiveCategory, deleteCategory } = useData();
   const theme = useTheme();
   const [view, setView] = useState<ChartView>(() => getPref<ChartView>("homeView", DEFAULT_CHART_VIEW, VIEWS));
   const [name, setName] = useState("");
@@ -27,7 +28,9 @@ export function Settings({ email }: { email?: string }) {
   const [picking, setPicking] = useState(false);
   const [importing, setImporting] = useState(false);
 
-  const guard = async (fn: () => Promise<unknown>) => { setErr(""); try { await fn(); } catch (e) { setErr((e as Error).message); } };
+  const [busy, setBusy] = useState(false);
+  // one action at a time: buttons grey out while it runs, so a second tap cannot repeat it
+  const guard = async (fn: () => Promise<unknown>) => { if (busy) return; setErr(""); setBusy(true); try { await fn(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
 
   function exportCsv() {
     const cname = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "";
@@ -51,11 +54,11 @@ export function Settings({ email }: { email?: string }) {
       <div className="lab section">Starting balance</div>
       <p className="hint">Money you already had when you started using Kharcha (optional). It is the starting point of your account balance.</p>
       <div className="row-gap"><input inputMode="decimal" placeholder="e.g. 40000" value={ob} onChange={(e) => setOb(e.target.value.replace(/[^0-9.-]/g, ""))} aria-label="Starting balance" />
-        <button className="btn small" onClick={() => void guard(() => setOpeningBalance(Number(ob) || 0))}>{openingBalance ? "Update" : "Set"}</button></div>
+        <button className="btn small" disabled={busy} onClick={() => void guard(() => setOpeningBalance(Number(ob) || 0))}>{openingBalance ? "Update" : "Set"}</button></div>
 
       <div className="lab section">Monthly budget</div>
       <div className="row-gap"><input inputMode="decimal" placeholder="e.g. 120000" value={bud} onChange={(e) => setBud(e.target.value.replace(/[^0-9.]/g, ""))} aria-label="Monthly budget" />
-        <button className="btn small" onClick={() => void guard(() => setBudget(Number(bud) > 0 ? Number(bud) : null))}>{budget ? "Update" : "Set"}</button></div>
+        <button className="btn small" disabled={busy} onClick={() => void guard(() => setBudget(Number(bud) > 0 ? Number(bud) : null))}>{budget ? "Update" : "Set"}</button></div>
       <p className="hint">Home shows how much you saved or went over, based on your real cost each month. Leave empty and tap Update to remove it.</p>
 
       <div className="lab section">Spent for</div>
@@ -63,7 +66,7 @@ export function Settings({ email }: { email?: string }) {
         <span key={t.id} className="chip on" style={{ cursor: "default" }}>{t.name}
           <button aria-label={`Remove ${t.name}`} style={{ marginLeft: 4, opacity: .8 }} onClick={() => { if (confirm(`Remove "${t.name}"? Its expenses will count as Myself.`)) void guard(() => removeTarget(t.id)); }}>✕</button></span>))}</div>
       <div className="row-gap"><input placeholder="e.g. Wife, Parents" value={tname} onChange={(e) => setTname(e.target.value)} />
-        <button className="btn small" disabled={!tname.trim()} onClick={() => void guard(async () => { await addTarget(tname); setTname(""); })}>Add</button></div>
+        <button className="btn small" disabled={!tname.trim() || busy} onClick={() => void guard(async () => { await addTarget(tname); setTname(""); })}>Add</button></div>
 
       <div className="lab section">People</div>
       <div className="card list">
@@ -71,12 +74,14 @@ export function Settings({ email }: { email?: string }) {
         {people.map((p) => (
           <div key={p.id} className="row static">
             <Icon name="user" size={18} /><div className="grow"><b>{p.name}</b>{p.is_roommate && <small>Roommate</small>}</div>
-            {!p.is_roommate && <button className="btn small" onClick={() => void guard(() => setRoommate(p.id))}>Make roommate</button>}
+            {!p.is_roommate && <button className="btn small" disabled={busy} onClick={() => void guard(() => setRoommate(p.id))}>Make roommate</button>}
+            <button className="icon-btn" disabled={busy} aria-label={`Delete ${p.name}`} onClick={() => { if (confirm(deletePersonMessage(p, expenses, settlements, loans))) void guard(() => deletePerson(p.id)); }}><Icon name="trash" size={16} /></button>
           </div>
         ))}
       </div>
+      <p className="hint">“Roommate” is just the person shown first on the Roommates tab. Everyone you share a bill or a payment with appears there too, so you can have as many people as you like.</p>
       <div className="row-gap"><input placeholder="Add a person" value={name} onChange={(e) => setName(e.target.value)} />
-        <button className="btn small" disabled={!name.trim()} onClick={() => void guard(async () => { await addPerson(name, people.length === 0); setName(""); })}>Add</button></div>
+        <button className="btn small" disabled={!name.trim() || busy} onClick={() => void guard(async () => { await addPerson(name, people.length === 0); setName(""); })}>Add</button></div>
 
       <div className="lab section">Categories · {categories.length}</div>
       <div className="card list">
@@ -91,7 +96,7 @@ export function Settings({ email }: { email?: string }) {
       <div className="row-gap">
         <button className="icon-btn boxed" aria-label="Choose icon" onClick={() => setPicking(true)}><Icon name={icon} size={18} /></button>
         <input placeholder="New category" value={cat} onChange={(e) => setCat(e.target.value)} />
-        <button className="btn small" disabled={!cat.trim()} onClick={() => void guard(async () => { await addCategory(cat, icon); setCat(""); setIcon("tag"); })}>Add</button>
+        <button className="btn small" disabled={!cat.trim() || busy} onClick={() => void guard(async () => { await addCategory(cat, icon); setCat(""); setIcon("tag"); })}>Add</button>
       </div>
       {picking && (
         <Sheet title="Pick an icon" onClose={() => setPicking(false)}>

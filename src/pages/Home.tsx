@@ -13,6 +13,7 @@ import { money } from "../lib/format";
 import { chartSlices, namesOf, oweByPerson, friendOwesMe, iOweFriend, myCost, paidOut, rankCategories, sum, type Slice } from "../lib/calc";
 import { APP, DEFAULT_CHART_VIEW, SPLIT_LABELS, type ChartView } from "../lib/config";
 import { getPref, setPref } from "../lib/prefs";
+import { useBackLayer } from "../lib/backstack";
 
 const VIEWS: readonly ChartView[] = ["receipt", "bubbles", "gauge", "ring", "bar"];
 
@@ -49,6 +50,8 @@ export function Home() {
   const parts = [owe > 0 && `+ ${money(owe)} owed to ${APP.FRIENDS_LABEL}`, claims > 0 && `${money(claims)} claims waiting`].filter(Boolean) as string[];
   const breakdown = parts.length ? `${parts.join(" · ")} · estimated spent ${money(total)}` : total !== paid ? `Estimated spent ${money(total)}` : "Tap for the full picture";
   const toReview = expenses.filter((e) => !e.reviewed).length;
+  useBackLayer(reviewing, () => setReviewing(false));
+  useBackLayer(overview, () => setOverview(false));
   if (reviewing) return <Review onBack={() => setReviewing(false)} />;
   if (overview) return <Overview onBack={() => setOverview(false)} />;
 

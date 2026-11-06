@@ -43,6 +43,7 @@ interface DataCtx {
   updateSettlement: (id: string, v: { amount: number; note: string; paid_on: string; direction: PayDirection }) => Promise<void>;
   deleteSettlement: (id: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  deletePerson: (id: string) => Promise<void>;
   setOpeningBalance: (v: number) => Promise<void>;
   addSettlement: (v: { person_id: string; amount: number; note: string; paid_on: string; direction: PayDirection }, allocs?: { expense_id: string; amount: number }[]) => Promise<void>;
 }
@@ -209,6 +210,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await run(supabase.from("settlements").update(v).eq("id", id));
     },
     deleteSettlement: (id) => run(supabase.from("settlements").delete().eq("id", id)), // its bill ticks are removed with it
+    deletePerson: async (id) => {
+      // 1) loans with this person (repayments first, they are protected by a foreign key)
+      const { data: ls, error: e0 } = await supabase.from("loans").select("id").eq("person_id", id);
+      if (e0) throw new Error(e0.message);
+      const loanIds = (ls ?? []).map((l) => (l as { id: string }).id);
+      if (loanIds.length) {
+        const a = await supabase.from("loan_payments").delete().in("loan_id", loanIds); if (a.error) throw new Error(a.error.message);
+        const b = await supabase.from("loans").delete().in("id", loanIds); if (b.error) throw new Error(b.error.message);
+      }
+      // 2) payments between you and them (their bill ticks go with them)
+      const c = await supabase.from("settlements").delete().eq("person_id", id); if (c.error) throw new Error(c.error.message);
+      // 3) bills they paid disappear; bills you paid become plain personal expenses at full cost
+      const d = await supabase.from("expenses").delete().eq("person_id", id).eq("paid_by", "friend"); if (d.error) throw new Error(d.error.message);
+      const f = await supabase.from("expenses").update({ person_id: null, split: "personal", friend_share: 0 }).eq("person_id", id); if (f.error) throw new Error(f.error.message);
+      await run(supabase.from("people").delete().eq("id", id));
+    },
     deleteCategory: (id) => run(supabase.from("categories").delete().eq("id", id)),     // expenses keep existing as Uncategorized
     setOpeningBalance: (v) => run(supabase.from("account_settings").upsert({ opening_balance: v }, { onConflict: "user_id" })),
     addSettlement: async (v, allocs = []) => {

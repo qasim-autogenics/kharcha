@@ -1,7 +1,9 @@
 import { useEffect, type ReactNode } from "react";
 import { Icon } from "../lib/icons";
+import { useBackLayer } from "../lib/backstack";
 
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  useBackLayer(true, onClose);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);

@@ -10,6 +10,7 @@ import { inRange, prettyDate, today } from "../lib/dates";
 import { money } from "../lib/format";
 import { Summary } from "./Summary";
 import { useNav } from "../lib/nav";
+import { useBackLayer } from "../lib/backstack";
 
 /** The full money picture for the selected period. Home stays minimal; this is one tap away. */
 export function Overview({ onBack }: { onBack: () => void }) {
@@ -60,6 +61,7 @@ export function Overview({ onBack }: { onBack: () => void }) {
     v: sum(list.filter((e) => (e.target_id ? e.target_id === t.id : t.name === DEFAULT_TARGET_NAME)).map(myCost)),
   })).filter((x) => x.v > 0);
 
+  useBackLayer(summary, () => setSummary(false));
   if (summary) return <Summary onBack={() => setSummary(false)} />;
   return (
     <>

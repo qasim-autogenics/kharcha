@@ -3,6 +3,7 @@ import { Icon } from "../lib/icons";
 import { Logo } from "./Logo";
 import { APP } from "../lib/config";
 import { usePeriod } from "../lib/period";
+import { useBackLayer } from "../lib/backstack";
 import type { Period } from "../lib/dates";
 
 const OPTIONS: { id: Period; label: string; hint: string }[] = [
@@ -15,6 +16,7 @@ const OPTIONS: { id: Period; label: string; hint: string }[] = [
 
 export function Drawer({ onClose }: { onClose: () => void }) {
   const { state, set } = usePeriod();
+  useBackLayer(true, onClose);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);

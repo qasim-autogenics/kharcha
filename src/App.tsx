@@ -19,6 +19,7 @@ import { useTheme } from "./lib/theme";
 import { PeriodProvider } from "./lib/period";
 import { Drawer } from "./components/Drawer";
 import { Nav, type PayIntent } from "./lib/nav";
+import { useBackLayer } from "./lib/backstack";
 
 const TABS = [
   { id: "home", label: "Home", icon: "home_nav" },
@@ -40,6 +41,7 @@ function Shell({ email }: { email?: string }) {
   useEffect(() => { const t = window.setTimeout(() => setMinDone(true), APP.SPLASH_MIN_MS); return () => window.clearTimeout(t); }, []);
 
   const go = (t: TabId) => { setTab(t); setPref("tab", t); };
+  useBackLayer(tab !== "home", () => go("home")); // Back from any other tab returns to Home
 
   const openPay = (i: PayIntent) => { setIntent(i); go("room"); };
 

@@ -275,3 +275,14 @@ input.amount { width: 70%; text-align: center; border: 0; background: none; font
 .card.owed-card { border-color: var(--pos); }
 .bill-pick input[type=checkbox] { width: 18px; height: 18px; padding: 0; flex: none; }
 .clear-btn { margin-left: auto; font-size: 11px; letter-spacing: .12em; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; }
+
+/* ── press feedback: every tappable thing visibly reacts the moment it is touched ── */
+button, a, summary, [role="tab"], .chip, .row { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button { transition: transform .08s ease, filter .08s ease, background-color .12s ease, opacity .12s ease; }
+button:active:not(:disabled) { transform: scale(.95); filter: brightness(.9); }
+.btn:active:not(:disabled), .chip:active, .drawer-item:active { transform: scale(.96); }
+.btn.primary:active:not(:disabled) { filter: brightness(.82); }
+.row:active:not(.static), button.row:active { background: var(--seg); transform: none; filter: none; }
+nav button:active { transform: scale(.92); }
+.btn:disabled { opacity: .55; }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } button:active:not(:disabled) { transform: none; } }
