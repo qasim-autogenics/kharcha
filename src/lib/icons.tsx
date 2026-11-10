@@ -13,6 +13,31 @@ const P: Record<string, string> = {
   car: "M5 16V11l2-5h10l2 5v5M3 16h18v3H3zM7.5 13h.01M16.5 13h.01",
   coffee: "M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM16 9h2a2 2 0 0 1 0 5h-2M8 3v2M12 3v2",
   tag: "M3 12V4h8l10 10-8 8zM7.5 8.5h.01",
+  health: "M9 3h6v6h6v6h-6v6H9v-6H3V9h6z",
+  fuel: "M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M4 21h12M7 8h6M15 9h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V9l-3-3",
+  plane: "M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z",
+  fitness: "M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11",
+  paw: "M12 19c-2.5 0-4.5-1.5-4.5-3.3 0-2 2.2-3.7 4.5-3.7s4.5 1.7 4.5 3.7c0 1.8-2 3.3-4.5 3.3zM6 11a1.4 1.4 0 1 0 0-.01M18 11a1.4 1.4 0 1 0 0-.01M9.5 7.5a1.4 1.4 0 1 0 0-.01M14.5 7.5a1.4 1.4 0 1 0 0-.01",
+  tools: "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z",
+  shirt: "M8 3 3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z",
+  music: "M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
+  laptop: "M5 6a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9H5zM2.5 19h19l-1.5-4H4z",
+  camera: "M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z",
+  bike: "M6 18.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM18 18.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM6 15l4-8h5l3 8M10 7l4 8M9 5h3",
+  scissors: "M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8 8l12 11M8 16 20 5",
+  baby: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM9 11h.01M15 11h.01M9.5 15a3.5 3.5 0 0 0 5 0M12 5c0-1.5 1-2.5 2.5-2.5",
+  pill: "M10.5 20.5a4.95 4.95 0 0 1-7-7l10-10a4.95 4.95 0 0 1 7 7zM8.5 8.5l7 7",
+  drop: "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z",
+  flame: "M12 3c1 3.5 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.3 1.5 1 2.2 2 2.5C11 8.5 11 5.5 12 3z",
+  tv: "M4 7h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM8 3l4 4 4-4",
+  gamepad: "M7 8h10a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-.6.8A3 3 0 0 1 3 13v-1a4 4 0 0 1 4-4zM8 10.5v2M7 11.5h2M15.5 11h.01M17.5 12.5h.01",
+  cap: "M2 9l10-5 10 5-10 5zM6 11.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5M22 9v6",
+  briefcase: "M4 8h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM9 8V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V8M3 13h18",
+  wallet: "M4 7a2 2 0 0 1 2-2h12v3M4 7v11a2 2 0 0 0 2 2h14V8H6a2 2 0 0 1-2-1zM16 14h.01",
+  bed: "M3 19V6M3 15h18v4M21 15v-3a3 3 0 0 0-3-3h-7v6M7.5 12.5a1.8 1.8 0 1 0 0-.01",
+  key: "M14 10a4 4 0 1 0-3.9 4L11 15h2v2h2v2h3v-3l-4.1-4.1A4 4 0 0 0 14 10zM8.5 8.5h.01",
+  coin: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z",
+  wifi: "M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0M12 19.5h.01",
   plus: "M12 5v14M5 12h14",
   dots: "M12 5.5h.01M12 12h.01M12 18.5h.01",
   menu: "M4 7h16M4 12h10M4 17h16",
@@ -46,7 +71,55 @@ const P: Record<string, string> = {
 };
 
 // icons a user can pick for a category
-export const CATEGORY_ICON_KEYS = ["food", "coffee", "cart", "bus", "car", "bills", "home", "bag", "heart", "play", "gift", "book", "phone", "tag"];
+export const CATEGORY_ICON_KEYS = ["food", "coffee", "cart", "bus", "car", "fuel", "plane", "bills", "wifi", "home", "bag", "shirt", "heart", "health", "fitness", "play", "tv", "gamepad", "music", "camera", "gift", "book", "cap", "laptop", "briefcase", "phone", "tools", "key", "bike", "scissors", "baby", "pill", "paw", "drop", "flame", "bed", "wallet", "coin", "tag"];
+
+// words that suggest an icon, so a new category gets a fitting one without picking (first match wins; add words freely)
+const ICON_WORDS: [string, string[]][] = [
+  ["coffee", ["coffee", "tea", "cafe", "chai", "starbucks"]],
+  ["food", ["food", "meal", "lunch", "dinner", "breakfast", "restaurant", "eat", "snack", "pizza", "burger", "biryani", "dining", "takeaway", "grocer"]],
+  ["fuel", ["fuel", "petrol", "diesel", "gas", "cng"]],
+  ["plane", ["flight", "travel", "trip", "tour", "hotel", "vacation", "holiday", "visa", "airline"]],
+  ["car", ["car", "uber", "careem", "indrive", "taxi", "ride", "parking", "toll", "vehicle", "bike", "motorcycle"]],
+  ["bus", ["bus", "transport", "commute", "metro", "train", "daewoo", "fare"]],
+  ["wifi", ["internet", "wifi", "broadband", "data", "nayatel", "stormfiber", "subscription"]],
+  ["phone", ["phone", "mobile", "recharge", "load", "jazz", "zong", "telenor", "ufone", "sim"]],
+  ["bills", ["bill", "electric", "utility", "utilities", "water", "k-electric", "sui", "ptcl", "tax", "insurance"]],
+  ["home", ["home", "house", "furniture", "maintenance", "repair", "cleaning", "maid", "kitchen"]],
+  ["cart", ["shopping", "market", "mart", "store", "supermarket", "mall", "grocery"]],
+  ["shirt", ["cloth", "clothes", "shirt", "shoes", "fashion", "laundry", "tailor", "dress", "wear"]],
+  ["bag", ["bag", "accessor", "luggage", "purchase", "online order", "daraz", "amazon"]],
+  ["health", ["health", "medical", "medicine", "doctor", "hospital", "pharmacy", "dental", "clinic", "lab test", "therapy"]],
+  ["fitness", ["gym", "fitness", "workout", "sport", "supplement", "protein", "yoga", "cricket", "football"]],
+  ["play", ["movie", "cinema", "netflix", "entertainment", "fun", "outing", "youtube", "spotify"]],
+  ["music", ["music", "concert", "song"]],
+  ["gift", ["gift", "present", "wedding", "eid", "birthday", "donation", "charity", "zakat", "sadqa"]],
+  ["book", ["book", "course", "education", "school", "fee", "tuition", "study", "university", "exam", "udemy"]],
+  ["tools", ["tool", "hardware", "fix", "workshop", "mechanic", "plumber", "electrician"]],
+  ["paw", ["pet", "cat", "dog", "vet", "animal"]],
+  ["drop", ["water bottle", "water tank", "plumb"]],
+  ["flame", ["gas bill", "heater", "geyser", "stove"]],
+  ["laptop", ["laptop", "computer", "software", "tech", "gadget", "electronics", "hosting", "domain", "api", "cloud"]],
+  ["camera", ["camera", "photo", "photography"]],
+  ["bike", ["cycle", "cycling", "bicycle"]],
+  ["scissors", ["salon", "haircut", "barber", "grooming"]],
+  ["baby", ["baby", "kids", "child", "diaper", "toy"]],
+  ["pill", ["pill", "tablet", "medicine", "supplement"]],
+  ["tv", ["tv", "cable", "streaming", "dish"]],
+  ["gamepad", ["game", "gaming", "playstation", "steam", "xbox"]],
+  ["cap", ["graduat", "degree", "scholar", "class"]],
+  ["briefcase", ["office", "work", "business", "client", "company", "meeting"]],
+  ["wallet", ["wallet", "cash", "savings", "saving", "emergency"]],
+  ["coin", ["loan", "interest", "fee", "charges", "bank"]],
+  ["bed", ["hostel", "stay", "bedroom", "mattress"]],
+  ["key", ["rent", "deposit", "lock", "key"]],
+  ["heart", ["love", "wife", "family", "parents", "kids", "baby", "date", "personal care", "salon", "haircut", "barber", "skincare"]],
+];
+/** Picks an icon from the category name; falls back to the generic tag. */
+export function suggestIcon(name: string): string {
+  const n = name.toLowerCase();
+  for (const [icon, words] of ICON_WORDS) if (words.some((w) => n.includes(w))) return icon;
+  return "tag";
+}
 
 export function Icon({ name, size = 20, stroke = 1.8 }: { name: string; size?: number; stroke?: number }) {
   const d = P[name] ?? P.tag; // unknown/legacy (e.g. emoji) values fall back to a tag

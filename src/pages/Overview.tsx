@@ -10,6 +10,7 @@ import { inRange, prettyDate, today } from "../lib/dates";
 import { money } from "../lib/format";
 import { Summary } from "./Summary";
 import { useNav } from "../lib/nav";
+import { Secret, peek, useMasked } from "../lib/privacy";
 import { useBackLayer } from "../lib/backstack";
 
 /** The full money picture for the selected period. Home stays minimal; this is one tap away. */
@@ -27,6 +28,7 @@ export function Overview({ onBack }: { onBack: () => void }) {
   const net = sum(list.map(myCost));
   const back = incoming(expenses, settlements, loanViews, people);
   const balances = people.map((pp) => ({ person: pp, bal: friendBalance(pp.id, expenses, settlements).balance }));
+  const incomeHidden = useMasked();
   const acct = accountBalance(openingBalance, expenses, incomes, settlements, loans, loanPayments);
 
   // ── "coming back", scoped to the selected period ──
@@ -137,7 +139,7 @@ export function Overview({ onBack }: { onBack: () => void }) {
       <div className="card">
         {acct.opening !== 0 && <div className="line"><span>Starting balance</span><b>{money(acct.opening)}</b></div>}
         <div className="line"><span>Money in</span><b className="pos">{money(acct.in.total)}</b></div>
-        {acct.in.income > 0 && <div className="line small"><span className="muted">Income</span><b>{money(acct.in.income)}</b></div>}
+        {acct.in.income > 0 && <div className="line small"><span className="muted">Income</span><b><Secret>{money(acct.in.income)}</Secret></b></div>}
         {acct.in.claims > 0 && <div className="line small"><span className="muted">Company claims paid back</span><b>{money(acct.in.claims)}</b></div>}
         {acct.in.friends > 0 && <div className="line small"><span className="muted">Friends paid you</span><b>{money(acct.in.friends)}</b></div>}
         {acct.in.loansBack > 0 && <div className="line small"><span className="muted">Loan money returned</span><b>{money(acct.in.loansBack)}</b></div>}
@@ -150,6 +152,10 @@ export function Overview({ onBack }: { onBack: () => void }) {
         <div className="line"><span><b>Balance</b></span><b className={acct.balance >= 0 ? "pos" : "neg"}>{money(acct.balance)}</b></div>
         {incomingAll > 0 && <div className="line small"><span className="muted">Once everything owed to you comes back</span><b>{money(acct.balance + incomingAll)}</b></div>}
       </div>
+      {incomeHidden ? (
+        <button className="btn block" onClick={peek}><Icon name="eye" size={16} /> Income is hidden · tap to show</button>
+      ) : (
+        <>
       {inc.length > 0 && (
         <div className="card list">
           {inc.map((i) => (
@@ -162,6 +168,8 @@ export function Overview({ onBack }: { onBack: () => void }) {
         </div>
       )}
       <button className="btn block" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Add income</button>
+        </>
+      )}
 
       {perTarget.length > 0 && (
         <>

@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useData } from "../lib/data";
 import { supabase } from "../lib/supabase";
 import { useTheme, type ThemePref } from "../lib/theme";
-import { Icon, CATEGORY_ICON_KEYS } from "../lib/icons";
+import { Icon, CATEGORY_ICON_KEYS, suggestIcon } from "../lib/icons";
 import { CHART_VIEWS, DEFAULT_CHART_VIEW, type ChartView } from "../lib/config";
 import { getPref, setPref } from "../lib/prefs";
 import { Sheet } from "../components/Sheet";
 import { ImportSheet } from "../components/ImportSheet";
+import { setHideMoney, useHideMoney } from "../lib/privacy";
 import { deletePersonMessage } from "../lib/people";
 
 const THEMES: { id: ThemePref; label: string; icon: string }[] = [
@@ -15,19 +16,21 @@ const THEMES: { id: ThemePref; label: string; icon: string }[] = [
 const VIEWS = CHART_VIEWS.map((v) => v.id) as readonly ChartView[];
 
 export function Settings({ email }: { email?: string }) {
-  const { openingBalance, setOpeningBalance, budget, setBudget, targets, addTarget, removeTarget, people, categories, expenses, loans, settlements, addPerson, setRoommate, deletePerson, addCategory, archiveCategory, deleteCategory } = useData();
+  const { openingBalance, setOpeningBalance, budget, setBudget, targets, addTarget, removeTarget, people, categories, expenses, loans, settlements, addPerson, setRoommate, deletePerson, addCategory, archiveCategory, deleteCategory, setCategoryIcon } = useData();
   const theme = useTheme();
   const [view, setView] = useState<ChartView>(() => getPref<ChartView>("homeView", DEFAULT_CHART_VIEW, VIEWS));
   const [name, setName] = useState("");
   const [cat, setCat] = useState("");
-  const [icon, setIcon] = useState("tag");
+  const [icon, setIcon] = useState("");                       // empty = pick one automatically from the name
+  const autoIcon = icon || suggestIcon(cat);
   const [err, setErr] = useState("");
   const [tname, setTname] = useState("");
   const [bud, setBud] = useState(budget ? String(budget) : "");
   const [ob, setOb] = useState(openingBalance ? String(openingBalance) : "");
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState<null | "new" | string>(null); // "new" = the category being added, otherwise a category id
   const [importing, setImporting] = useState(false);
 
+  const hideMoney = useHideMoney();
   const [busy, setBusy] = useState(false);
   // one action at a time: buttons grey out while it runs, so a second tap cannot repeat it
   const guard = async (fn: () => Promise<unknown>) => { if (busy) return; setErr(""); setBusy(true); try { await fn(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
@@ -48,6 +51,9 @@ export function Settings({ email }: { email?: string }) {
     <>
       <div className="lab">Appearance</div>
       <div className="seg">{THEMES.map((t) => <button key={t.id} className={theme.pref === t.id ? "on" : ""} onClick={() => theme.set(t.id)}><Icon name={t.icon} size={16} /> {t.label}</button>)}</div>
+      <div className="lab section">Privacy</div>
+      <label className="check"><input type="checkbox" checked={hideMoney} onChange={(e) => setHideMoney(e.target.checked)} /> Hide income</label>
+      <p className="hint">Your income entries and the Add income button stay hidden. Tap “Income is hidden” on the Overview to see them for a few seconds.</p>
       <div className="lab section">Home chart</div>
       <div className="seg">{CHART_VIEWS.map((v) => <button key={v.id} className={view === v.id ? "on" : ""} onClick={() => { setView(v.id); setPref("homeView", v.id); }}>{v.label}</button>)}</div>
 
@@ -87,20 +93,24 @@ export function Settings({ email }: { email?: string }) {
       <div className="card list">
         {categories.map((c) => (
           <div key={c.id} className="row static">
-            <Icon name={c.icon} size={18} /><div className="grow"><b style={c.archived ? { opacity: 0.5 } : undefined}>{c.name}</b>{c.archived && <small>Hidden</small>}</div>
+            <button className="icon-btn" aria-label={`Change icon of ${c.name}`} onClick={() => setPicking(c.id)}><Icon name={c.icon} size={18} /></button><div className="grow"><b style={c.archived ? { opacity: 0.5 } : undefined}>{c.name}</b>{c.archived && <small>Hidden</small>}</div>
             <button className="btn small" onClick={() => void guard(() => archiveCategory(c.id, !c.archived))}>{c.archived ? "Show" : "Hide"}</button>
             <button className="icon-btn" aria-label={`Delete ${c.name}`} onClick={() => { const n = expenses.filter((e) => e.category_id === c.id).length; if (confirm(n ? `Delete "${c.name}"? Its ${n} ${n === 1 ? "entry" : "entries"} will stay but show as Uncategorized.` : `Delete "${c.name}"?`)) void guard(() => deleteCategory(c.id)); }}><Icon name="trash" size={16} /></button>
           </div>
         ))}
       </div>
+      {categories.some((c) => c.icon === "tag" && suggestIcon(c.name) !== "tag") && (
+        <button className="btn block" disabled={busy} onClick={() => void guard(async () => { for (const c of categories) if (c.icon === "tag" && suggestIcon(c.name) !== "tag") await setCategoryIcon(c.id, suggestIcon(c.name)); })}>Pick better icons for generic ones</button>
+      )}
       <div className="row-gap">
-        <button className="icon-btn boxed" aria-label="Choose icon" onClick={() => setPicking(true)}><Icon name={icon} size={18} /></button>
+        <button className="icon-btn boxed" aria-label="Choose icon" onClick={() => setPicking("new")}><Icon name={autoIcon} size={18} /></button>
         <input placeholder="New category" value={cat} onChange={(e) => setCat(e.target.value)} />
-        <button className="btn small" disabled={!cat.trim() || busy} onClick={() => void guard(async () => { await addCategory(cat, icon); setCat(""); setIcon("tag"); })}>Add</button>
+        <button className="btn small" disabled={!cat.trim() || busy} onClick={() => void guard(async () => { await addCategory(cat, autoIcon); setCat(""); setIcon(""); })}>Add</button>
       </div>
-      {picking && (
-        <Sheet title="Pick an icon" onClose={() => setPicking(false)}>
-          <div className="icon-grid">{CATEGORY_ICON_KEYS.map((k) => <button key={k} className={`chip ${icon === k ? "on" : ""}`} onClick={() => { setIcon(k); setPicking(false); }} aria-label={k}><Icon name={k} size={20} /></button>)}</div>
+      {picking !== null && (
+        <Sheet title="Pick an icon" onClose={() => setPicking(null)}>
+          <div className="icon-grid">{CATEGORY_ICON_KEYS.map((k) => <button key={k} className={`chip ${(picking === "new" ? autoIcon : categories.find((c) => c.id === picking)?.icon) === k ? "on" : ""}`} aria-label={k}
+            onClick={() => { if (picking === "new") setIcon(k); else if (picking) void guard(() => setCategoryIcon(picking, k)); setPicking(null); }}><Icon name={k} size={20} /></button>)}</div>
         </Sheet>
       )}
       {err && <p className="error">{err}</p>}

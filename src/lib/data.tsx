@@ -43,6 +43,7 @@ interface DataCtx {
   updateSettlement: (id: string, v: { amount: number; note: string; paid_on: string; direction: PayDirection }) => Promise<void>;
   deleteSettlement: (id: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  setCategoryIcon: (id: string, icon: string) => Promise<void>;
   deletePerson: (id: string) => Promise<void>;
   setOpeningBalance: (v: number) => Promise<void>;
   addSettlement: (v: { person_id: string; amount: number; note: string; paid_on: string; direction: PayDirection }, allocs?: { expense_id: string; amount: number }[]) => Promise<void>;
@@ -226,6 +227,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const f = await supabase.from("expenses").update({ person_id: null, split: "personal", friend_share: 0 }).eq("person_id", id); if (f.error) throw new Error(f.error.message);
       await run(supabase.from("people").delete().eq("id", id));
     },
+    setCategoryIcon: (id, icon) => run(supabase.from("categories").update({ icon }).eq("id", id)),
     deleteCategory: (id) => run(supabase.from("categories").delete().eq("id", id)),     // expenses keep existing as Uncategorized
     setOpeningBalance: (v) => run(supabase.from("account_settings").upsert({ opening_balance: v }, { onConflict: "user_id" })),
     addSettlement: async (v, allocs = []) => {
