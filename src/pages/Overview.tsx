@@ -4,7 +4,7 @@ import { usePeriod } from "../lib/period";
 import { PeriodNav } from "../components/PeriodBar";
 import { Sheet } from "../components/Sheet";
 import { Icon } from "../lib/icons";
-import { accountBalance, buildLoans, friendBalance, friendOwesMe, iOweFriend, incoming, myCost, namesOf, oweByPerson, paidOut, sum } from "../lib/calc";
+import { accountBalance, buildLoans, claimLeft, claimReceipts, friendBalance, friendOwesMe, iOweFriend, incoming, myCost, namesOf, oweByPerson, paidOut, sum } from "../lib/calc";
 import { CHART_COLORS, DEFAULT_TARGET_NAME } from "../lib/config";
 import { inRange, prettyDate, today } from "../lib/dates";
 import { money } from "../lib/format";
@@ -15,7 +15,7 @@ import { useBackLayer } from "../lib/backstack";
 
 /** The full money picture for the selected period. Home stays minimal; this is one tap away. */
 export function Overview({ onBack }: { onBack: () => void }) {
-  const { expenses, people, settlements, loans, loanPayments, budget, targets, incomes, openingBalance, addIncome, deleteIncome } = useData();
+  const { expenses, people, settlements, loans, loanPayments, claimPayments, budget, targets, incomes, openingBalance, addIncome, deleteIncome } = useData();
   const { state, range, label } = usePeriod();
   const [adding, setAdding] = useState(false);
   const [summary, setSummary] = useState(false);
@@ -26,18 +26,18 @@ export function Overview({ onBack }: { onBack: () => void }) {
   const loanViews = useMemo(() => buildLoans(loans, loanPayments, people), [loans, loanPayments, people]);
 
   const net = sum(list.map(myCost));
-  const back = incoming(expenses, settlements, loanViews, people);
+  const back = incoming(expenses, settlements, loanViews, people, claimPayments);
   const balances = people.map((pp) => ({ person: pp, bal: friendBalance(pp.id, expenses, settlements).balance }));
   const incomeHidden = useMasked();
-  const acct = accountBalance(openingBalance, expenses, incomes, settlements, loans, loanPayments);
+  const acct = accountBalance(openingBalance, expenses, incomes, settlements, loans, loanPayments, claimPayments);
 
   // ── "coming back", scoped to the selected period ──
   const mineP = list.filter((e) => e.person_id);
   const shareP = sum(mineP.map(friendOwesMe)) - sum(mineP.map(iOweFriend));            // net the roommate owes from this period's expenses
   const paidBackP = sum(settlements.filter((s) => inRange(s.paid_on, range)).map((s) => (s.direction === "received" ? s.amount : -s.amount)));
   const roommateP = Math.max(0, shareP - paidBackP);
-  const claimsP = sum(list.filter((e) => e.split === "reimbursable" && !e.reimbursed_at).map((e) => e.amount));
-  const claimsRecvP = sum(expenses.filter((e) => e.split === "reimbursable" && e.reimbursed_at && inRange(e.reimbursed_at, range)).map((e) => e.amount));
+  const claimsP = sum(list.map((e) => claimLeft(e, claimPayments)));
+  const claimsRecvP = sum(claimReceipts(expenses, claimPayments).filter((r) => inRange(r.date, range)).map((r) => r.amount));
   const gaveP = loanViews.filter((l) => l.direction === "gave" && inRange(l.loan_date, range));
   const loansP = sum(gaveP.map((l) => l.outstanding));
   const loanBackP = sum(loanViews.filter((l) => l.direction === "gave").flatMap((l) => l.payments).filter((x) => inRange(x.paid_on, range)).map((x) => x.amount));

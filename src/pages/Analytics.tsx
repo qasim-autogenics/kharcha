@@ -6,14 +6,14 @@ import { usePeriod } from "../lib/period";
 import { BarChart, BubbleChart, DayBars, GaugeChart, RingChart } from "../components/charts";
 import { addPeriod, fromISO, inRange, periodRange, toISO } from "../lib/dates";
 import { money } from "../lib/format";
-import { chartSlices, friendOwesMe, iOweFriend, myCost, paidOut, rankCategories, sum } from "../lib/calc";
+import { chartSlices, claimLeft, friendOwesMe, iOweFriend, myCost, paidOut, rankCategories, sum } from "../lib/calc";
 import { APP, DEFAULT_TARGET_NAME, type ChartView } from "../lib/config";
 import { getPref, setPref } from "../lib/prefs";
 
 const VIEWS: readonly ChartView[] = ["bubbles", "gauge", "ring", "bar"];
 
 export function Analytics() {
-  const { expenses, categories, targets } = useData();
+  const { expenses, categories, targets, claimPayments } = useData();
   const { state: p, range } = usePeriod();
   const [view, setView] = useState<ChartView>(() => getPref<ChartView>("statsView", "ring", VIEWS));
   const [measure, setMeasure] = useState<"mine" | "paid">("mine");
@@ -85,7 +85,7 @@ export function Analytics() {
             ))}
             <div className="line"><span>Friends owe you (this period)</span><b>{money(sum(list.map(friendOwesMe)))}</b></div>
             <div className="line"><span>You owe friends (this period)</span><b>{money(sum(list.map(iOweFriend)))}</b></div>
-            <div className="line"><span>Company claims pending</span><b>{money(sum(list.filter((e) => e.split === "reimbursable" && !e.reimbursed_at).map((e) => e.amount)))}</b></div>
+            <div className="line"><span>Company claims pending</span><b>{money(sum(list.map((e) => claimLeft(e, claimPayments))))}</b></div>
           </div>
         </>
       )}

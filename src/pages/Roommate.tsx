@@ -5,17 +5,19 @@ import { fromISO, inRange, prettyDate, today } from "../lib/dates";
 import { usePeriod } from "../lib/period";
 import { useNav } from "../lib/nav";
 import { PeriodNav } from "../components/PeriodBar";
-import { allocate, billStatus, friendBalance, friendOwesMe, iOweFriend, rankCategories, sum, type Bill } from "../lib/calc";
+import { ClaimSheet } from "../components/ClaimSheet";
+import { allocate, billStatus, claimLeft, claimReceived, friendBalance, friendOwesMe, iOweFriend, rankCategories, sum, type Bill } from "../lib/calc";
 import { money } from "../lib/format";
 import { Icon } from "../lib/icons";
 import { deletePersonMessage } from "../lib/people";
 import type { Expense, PayDirection, Settlement } from "../lib/types";
 
 export function Roommate() {
-  const { people, expenses, settlements, loans, allocations, categories, markReimbursed, deletePerson } = useData();
+  const { people, expenses, settlements, loans, allocations, categories, claimPayments, deletePerson } = useData();
   const [pid, setPid] = useState<string | null>(null);
   const [monthOpen, setMonthOpen] = useState<Record<string, boolean>>({}); // newest month starts open, the rest collapsed
   const [claimsOpen, setClaimsOpen] = useState(false);
+  const [claimId, setClaimId] = useState<string | null>(null);
   const [paying, setPaying] = useState<PayDirection | null>(null);
   const [payAmount, setPayAmount] = useState(0);
   const { intent, clearIntent } = useNav();
@@ -28,12 +30,39 @@ export function Roommate() {
   const [editing, setEditing] = useState<Settlement | null>(null);
 
   const { range } = usePeriod();
-  const pending = expenses.filter((e) => e.split === "reimbursable" && !e.reimbursed_at);
+  const allClaims = expenses.filter((e) => e.split === "reimbursable");
+  const pending = allClaims.filter((e) => claimLeft(e, claimPayments) > 0);
+  const paidClaims = allClaims.filter((e) => claimLeft(e, claimPayments) === 0);
+
+  const claimsCard = (
+    <>
+      {allClaims.length > 0 && (
+        <div className="card">
+          <button className="row" onClick={() => setClaimsOpen(!claimsOpen)}>
+            <div className="grow"><b>Company claims</b><small>{pending.length ? `${pending.length} waiting · not part of anyone's split` : "All paid back"}</small></div>
+            <span className="v serif">{money(sum(pending.map((e) => claimLeft(e, claimPayments))))}</span>
+            <span className="chev" style={{ transform: claimsOpen ? "rotate(90deg)" : undefined }}><Icon name="chev" size={16} /></span>
+          </button>
+          {claimsOpen && [...pending, ...paidClaims].map((e) => {
+            const left = claimLeft(e, claimPayments);
+            const got = claimReceived(e, claimPayments);
+            return (
+              <button key={e.id} className="line small tl-card" onClick={() => setClaimId(e.id)} aria-label={`Open claim ${e.note || "expense"}`}>
+                <span>{e.note || "Expense"} <span className="muted">· {e.reimbursable_from || "—"} · {prettyDate(e.spent_on)}</span></span>
+                <b className={left > 0 ? "" : "pos"}>{left > 0 ? `${money(left)} left` : "Paid back"}{left > 0 && got > 0 ? <span className="muted"> of {money(e.amount)}</span> : ""}</b></button>
+            );
+          })}
+          {claimsOpen && <p className="hint">Tap a claim to record money received (even in parts), correct it, edit or delete the claim.</p>}
+        </div>
+      )}
+      {claimId && <ClaimSheet expenseId={claimId} onClose={() => setClaimId(null)} />}
+    </>
+  );
 
   // everyone you share bills with, plus the roommate even before the first bill
   const sharing = people.filter((x) => x.is_roommate || expenses.some((e) => e.person_id === x.id) || settlements.some((t) => t.person_id === x.id));
   const person = sharing.find((x) => x.id === pid) ?? sharing.find((x) => x.is_roommate) ?? sharing[0];
-  if (!person) return <p className="empty">Add your roommate in <b>Settings → People</b>, then tag expenses as “Split” to track who owes whom.</p>;
+  if (!person) return <>{claimsCard}<p className="empty">Add your roommate in <b>Settings → People</b>, then tag expenses as “Split” to track who owes whom.</p></>;
 
   const mine = expenses.filter((e) => e.person_id === person.id && inRange(e.spent_on, range));
   const bal = friendBalance(person.id, expenses, settlements);
@@ -78,19 +107,7 @@ export function Roommate() {
 
   return (
     <>
-      {pending.length > 0 && (
-        <div className="card">
-          <button className="row" onClick={() => setClaimsOpen(!claimsOpen)}>
-            <div className="grow"><b>Company claims waiting</b><small>Not part of anyone's split</small></div>
-            <span className="v serif">{money(sum(pending.map((e) => e.amount)))}</span>
-            <span className="chev" style={{ transform: claimsOpen ? "rotate(90deg)" : undefined }}><Icon name="chev" size={16} /></span>
-          </button>
-          {claimsOpen && pending.map((e) => (
-            <div key={e.id} className="line small"><span>{e.note || "Expense"} <span className="muted">· {e.reimbursable_from || "—"} · {prettyDate(e.spent_on)}</span></span>
-              <span className="right-actions"><b>{money(e.amount)}</b><button className="btn small" onClick={() => void markReimbursed(e.id, today()).catch((er) => alert(er.message))}>Received</button></span></div>
-          ))}
-        </div>
-      )}
+      {claimsCard}
       {sharing.length > 1 && (
         <div className="chips" role="tablist" aria-label="Person">
           {sharing.map((x) => {

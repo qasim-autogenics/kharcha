@@ -60,3 +60,6 @@ Run `supabase/migrations/006_settlement_allocations.sql` after 005. It lets a pa
 ## Migration 007 (starting balance)
 Run `supabase/migrations/007_opening_balance.sql` after 006. Optional: it stores the "Starting balance" you can set in Settings. The app works without it.
 After this update also redeploy the AI function: `npx supabase functions deploy ask-grok`.
+
+## Migration 008 (company claims paid in parts)
+Run `supabase/migrations/008_claim_payments.sql` after 007. It lets a company claim come back in several parts (half now, half later) and lets you correct or delete each part. Claims already marked as received are converted automatically. Until it is run, claims still show but recording a part asks you to run it.

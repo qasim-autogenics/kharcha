@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { supabase } from "./supabase";
 import { IMPORT_ICON_HINTS } from "./config";
 import type { ImportRow } from "./monefy";
-import type { Category, Expense, ExpenseInput, Loan, LoanDirection, LoanPayment, PayDirection, Person, Settlement, SettlementAllocation, SpendTarget, Income } from "./types";
+import type { Category, ClaimPayment, Expense, ExpenseInput, Loan, LoanDirection, LoanPayment, PayDirection, Person, Settlement, SettlementAllocation, SpendTarget, Income } from "./types";
 
 interface DataCtx {
   loading: boolean;
@@ -14,6 +14,7 @@ interface DataCtx {
   loanPayments: LoanPayment[];
   settlements: Settlement[];
   allocations: SettlementAllocation[];
+  claimPayments: ClaimPayment[];
   incomes: Income[];
   targets: SpendTarget[];
   budget: number | null;
@@ -29,6 +30,9 @@ interface DataCtx {
   saveExpense: (input: ExpenseInput, id?: string) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   markReimbursed: (id: string, date: string | null) => Promise<void>;
+  addClaimPayment: (expenseId: string, v: { amount: number; note: string; received_on: string }) => Promise<void>;
+  updateClaimPayment: (id: string, v: { amount: number; note: string; received_on: string }) => Promise<void>;
+  deleteClaimPayment: (id: string) => Promise<void>;
   addPerson: (name: string, isRoommate?: boolean) => Promise<Person>;
   setRoommate: (id: string) => Promise<void>;
   addCategory: (name: string, icon: string) => Promise<Category>;
@@ -73,6 +77,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [allocations, setAllocations] = useState<SettlementAllocation[]>([]);
+  const [claimPayments, setClaimPayments] = useState<ClaimPayment[]>([]);
   const [openingBalance, setOpeningState] = useState(0);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [targets, setTargets] = useState<SpendTarget[]>([]);
@@ -94,6 +99,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Tolerant on purpose: before migration 006 is run this table does not exist and the app must still work.
       const al = await supabase.from("settlement_allocations").select("id,settlement_id,expense_id,amount");
       setAllocations(al.error ? [] : (al.data ?? []).map((r: any) => ({ ...r, amount: num(r.amount) })));
+      const cp = await supabase.from("claim_payments").select("id,expense_id,amount,note,received_on").order("received_on"); // tolerant: table comes with migration 008
+      setClaimPayments(cp.error ? [] : (cp.data ?? []).map((r: any) => ({ ...r, amount: num(r.amount), note: r.note ?? "" })));
       const ob = await supabase.from("account_settings").select("opening_balance").maybeSingle();
       setOpeningState(ob.error || !ob.data ? 0 : num((ob.data as { opening_balance: unknown }).opening_balance));
       const firstErr = [c, p, e, l, lp, s, b, t, inc].find((r) => r.error)?.error;
@@ -124,8 +131,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await refresh();
   }, [refresh]);
 
+  /** Keeps expenses.reimbursed_at in step with the claim's parts, then reloads. */
+  const syncClaim = useCallback(async (expenseId: string) => {
+    const { data: ex } = await supabase.from("expenses").select("amount").eq("id", expenseId).single();
+    const { data: parts } = await supabase.from("claim_payments").select("amount,received_on").eq("expense_id", expenseId);
+    const total = (parts ?? []).reduce((a, r: any) => a + num(r.amount), 0);
+    const last = (parts ?? []).map((r: any) => r.received_on as string).sort().pop() ?? null;
+    const full = ex && total >= num((ex as { amount: unknown }).amount) - 0.005;
+    await supabase.from("expenses").update({ reimbursed_at: full ? last : null }).eq("id", expenseId);
+    await refresh();
+  }, [refresh]);
+
   const api = useMemo<DataCtx>(() => ({
-    loading, error, categories, people, expenses, loans, loanPayments, settlements, allocations, incomes, targets, budget, openingBalance,
+    loading, error, categories, people, expenses, loans, loanPayments, settlements, allocations, claimPayments, incomes, targets, budget, openingBalance,
     roommate: people.find((p) => p.is_roommate),
     refresh,
     addIncome: (v) => run(supabase.from("incomes").insert(v)),
@@ -175,6 +193,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
       run(id ? supabase.from("expenses").update(input).eq("id", id) : supabase.from("expenses").insert(input)),
     deleteExpense: (id) => run(supabase.from("expenses").delete().eq("id", id)),
     markReimbursed: (id, date) => run(supabase.from("expenses").update({ reimbursed_at: date }).eq("id", id)),
+    // a claim is "received" (reimbursed_at set) exactly when its parts add up to the full amount
+    addClaimPayment: async (expenseId, v) => {
+      const { error: e } = await supabase.from("claim_payments").insert({ expense_id: expenseId, ...v });
+      if (e) throw new Error(/claim_payments/.test(e.message) ? "Run migration 008 in Supabase first (it adds partial claim payments)." : e.message);
+      await syncClaim(expenseId);
+    },
+    updateClaimPayment: async (id, v) => {
+      const { data, error: e } = await supabase.from("claim_payments").update(v).eq("id", id).select("expense_id").single();
+      if (e) throw new Error(e.message);
+      await syncClaim((data as { expense_id: string }).expense_id);
+    },
+    deleteClaimPayment: async (id) => {
+      const { data, error: e } = await supabase.from("claim_payments").delete().eq("id", id).select("expense_id").single();
+      if (e) throw new Error(e.message);
+      await syncClaim((data as { expense_id: string }).expense_id);
+    },
     addPerson: async (name, isRoommate = false) => {
       const { data, error: e } = await supabase.from("people").insert({ name: name.trim(), is_roommate: isRoommate }).select("id,name,is_roommate").single();
       if (e) throw new Error(e.message);
@@ -240,7 +274,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       await refresh();
     },
-  }), [loading, error, categories, people, expenses, loans, loanPayments, settlements, allocations, incomes, targets, budget, openingBalance, categories, refresh, run]);
+  }), [loading, error, categories, people, expenses, loans, loanPayments, settlements, allocations, claimPayments, incomes, targets, budget, openingBalance, categories, refresh, run, syncClaim]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

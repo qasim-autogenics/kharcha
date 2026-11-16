@@ -16,6 +16,7 @@ export interface Loan { id: string; person_id: string; direction: LoanDirection;
 export interface LoanPayment { id: string; loan_id: string; amount: number; note: string; paid_on: string }
 export interface Settlement { id: string; person_id: string; amount: number; note: string; paid_on: string; direction: PayDirection }
 
+export interface ClaimPayment { id: string; expense_id: string; amount: number; note: string; received_on: string }
 export interface SettlementAllocation { id: string; settlement_id: string; expense_id: string; amount: number }
 
 export type ExpenseInput = Omit<Expense, "id" | "created_at">;

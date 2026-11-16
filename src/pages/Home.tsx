@@ -10,7 +10,7 @@ import { BarChart, BubbleChart, GaugeChart, Receipt, RingChart } from "../compon
 import { Icon } from "../lib/icons";
 import { inRange, prettyDate } from "../lib/dates";
 import { money } from "../lib/format";
-import { chartSlices, namesOf, oweByPerson, friendOwesMe, iOweFriend, myCost, paidOut, rankCategories, sum, type Slice } from "../lib/calc";
+import { chartSlices, claimLeft, namesOf, oweByPerson, friendOwesMe, iOweFriend, myCost, paidOut, rankCategories, sum, type Slice } from "../lib/calc";
 import { APP, DEFAULT_CHART_VIEW, SPLIT_LABELS, type ChartView } from "../lib/config";
 import { getPref, setPref } from "../lib/prefs";
 import { useBackLayer } from "../lib/backstack";
@@ -18,7 +18,7 @@ import { useBackLayer } from "../lib/backstack";
 const VIEWS: readonly ChartView[] = ["receipt", "bubbles", "gauge", "ring", "bar"];
 
 export function Home() {
-  const { expenses, categories, people, settlements } = useData();
+  const { expenses, categories, people, settlements, claimPayments } = useData();
   const { state: p, range, label } = usePeriod();
   const [overview, setOverview] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -40,7 +40,7 @@ export function Home() {
     window.setTimeout(() => document.getElementById(`cat-${s.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
   };
 
-  const claims = sum(inPeriod.filter((e) => e.split === "reimbursable" && !e.reimbursed_at).map((e) => e.amount));
+  const claims = sum(inPeriod.map((e) => claimLeft(e, claimPayments)));
   const chartProps = { slices, total, onSelect: select };
 
   // Headline = cash you actually paid for yourself and shared bills (company claims come back in full, so they are listed separately).

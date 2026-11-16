@@ -1,7 +1,24 @@
 import { APP, CHART_COLORS, OTHER_COLOR } from "./config";
-import type { Category, Expense, Income, Loan, LoanPayment, PayDirection, Person, Settlement, SettlementAllocation } from "./types";
+import type { Category, ClaimPayment, Expense, Income, Loan, LoanPayment, PayDirection, Person, Settlement, SettlementAllocation } from "./types";
 
 export const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+
+/** Company claims can come back in parts. Claims marked received before parts existed count as fully received. */
+export const claimParts = (e: Expense, pays: ClaimPayment[]) => pays.filter((p) => p.expense_id === e.id);
+export function claimReceived(e: Expense, pays: ClaimPayment[]): number {
+  const parts = claimParts(e, pays);
+  return parts.length ? sum(parts.map((p) => p.amount)) : e.reimbursed_at ? e.amount : 0;
+}
+/** What the company still owes you for this claim (0 for anything that is not a claim). */
+export const claimLeft = (e: Expense, pays: ClaimPayment[]) => (e.split === "reimbursable" ? Math.max(0, e.amount - claimReceived(e, pays)) : 0);
+/** Every receipt as { amount, date }, parts or the old single "received" date. */
+export function claimReceipts(expenses: Expense[], pays: ClaimPayment[]): { amount: number; date: string }[] {
+  return expenses.filter((e) => e.split === "reimbursable").flatMap((e) => {
+    const parts = claimParts(e, pays);
+    if (parts.length) return parts.map((p) => ({ amount: p.amount, date: p.received_on }));
+    return e.reimbursed_at ? [{ amount: e.amount, date: e.reimbursed_at }] : [];
+  });
+}
 
 /** The user's real cost: friend's portion and company claims are excluded. */
 export const myCost = (e: Expense) => (e.split === "reimbursable" ? 0 : e.amount - e.friend_share);
@@ -13,10 +30,10 @@ export const friendOwesMe = (e: Expense) => (e.paid_by === "me" ? e.friend_share
 export const iOweFriend = (e: Expense) => (e.paid_by === "friend" ? e.amount - e.friend_share : 0);
 
 /** Money coming back to the user: roommate balance owed, pending company claims, loans others still owe. */
-export function incoming(expenses: Expense[], settlements: Settlement[], loans: LoanView[], people: Person[]) {
+export function incoming(expenses: Expense[], settlements: Settlement[], loans: LoanView[], people: Person[], claimPays: ClaimPayment[] = []) {
   // everyone you share bills with, not only the roommate; each person's balance is counted on its own
   const roommate = sum(people.map((p) => Math.max(0, friendBalance(p.id, expenses, settlements).balance)));
-  const claims = sum(expenses.filter((e) => e.split === "reimbursable" && !e.reimbursed_at).map((e) => e.amount));
+  const claims = sum(expenses.map((e) => claimLeft(e, claimPays)));
   const loansOwed = sum(loans.filter((l) => l.direction === "gave").map((l) => l.outstanding));
   return { roommate, claims, loansOwed, total: roommate + claims + loansOwed };
 }
@@ -143,11 +160,11 @@ export interface AccountBalance {
   balance: number;
 }
 /** Bank-style balance: everything that came in minus everything that went out, since you started. Company claims count as out when paid and in when reimbursed. */
-export function accountBalance(opening: number, expenses: Expense[], incomes: Income[], settlements: Settlement[], loans: Loan[], loanPayments: LoanPayment[]): AccountBalance {
+export function accountBalance(opening: number, expenses: Expense[], incomes: Income[], settlements: Settlement[], loans: Loan[], loanPayments: LoanPayment[], claimPays: ClaimPayment[] = []): AccountBalance {
   const kind = new Map(loans.map((l) => [l.id, l.direction] as const));
   const inn = {
     income: sum(incomes.map((i) => i.amount)),
-    claims: sum(expenses.filter((e) => e.split === "reimbursable" && e.reimbursed_at).map((e) => e.amount)),
+    claims: sum(claimReceipts(expenses, claimPays).map((r) => r.amount)),
     friends: sum(settlements.filter((x) => x.direction === "received").map((x) => x.amount)),
     loansBack: sum(loanPayments.filter((x) => kind.get(x.loan_id) === "gave").map((x) => x.amount)),
     borrowed: sum(loans.filter((l) => l.direction === "borrowed").map((l) => l.amount)),

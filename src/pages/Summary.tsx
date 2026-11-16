@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useData } from "../lib/data";
 import { Icon } from "../lib/icons";
-import { accountBalance, billStatus, buildLoans, friendBalance, myCost, paidOut, sum } from "../lib/calc";
+import { accountBalance, billStatus, buildLoans, claimLeft, friendBalance, myCost, paidOut, sum } from "../lib/calc";
 import { fromISO } from "../lib/dates";
 import { money } from "../lib/format";
 import type { Expense, Settlement, SettlementAllocation } from "../lib/types";
@@ -30,15 +30,15 @@ function pendingMonths(personId: string, balance: number, expenses: Expense[], s
 
 /** Everything, all time: totals, who owes whom and from which month. */
 export function Summary({ onBack }: { onBack: () => void }) {
-  const { expenses, people, settlements, allocations, loans, loanPayments, incomes, openingBalance } = useData();
+  const { expenses, people, settlements, allocations, loans, loanPayments, claimPayments, incomes, openingBalance } = useData();
   const loanViews = useMemo(() => buildLoans(loans, loanPayments, people), [loans, loanPayments, people]);
 
   const totalSpent = sum(expenses.map(myCost));
-  const acct = accountBalance(openingBalance, expenses, incomes, settlements, loans, loanPayments);
+  const acct = accountBalance(openingBalance, expenses, incomes, settlements, loans, loanPayments, claimPayments);
 
-  const claims = expenses.filter((e) => e.split === "reimbursable" && !e.reimbursed_at);
-  const claimsTotal = sum(claims.map((e) => e.amount));
-  const claimMonths = [...claims.reduce((m, e) => m.set(monthKey(e.spent_on), (m.get(monthKey(e.spent_on)) ?? 0) + e.amount), new Map<string, number>())]
+  const claims = expenses.filter((e) => claimLeft(e, claimPayments) > 0);
+  const claimsTotal = sum(claims.map((e) => claimLeft(e, claimPayments)));
+  const claimMonths = [...claims.reduce((m, e) => m.set(monthKey(e.spent_on), (m.get(monthKey(e.spent_on)) ?? 0) + claimLeft(e, claimPayments)), new Map<string, number>())]
     .sort((a, b) => b[0].localeCompare(a[0]));
 
   const rows = people.map((p) => {
